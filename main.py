@@ -1,16 +1,23 @@
 import requests
 from fastapi import FastAPI, Query
+from pydantic import BaseModel
 import pandas as pd
 from typing import Optional, List
 import numpy as np
-
 
 
 app = FastAPI()
 
 response = requests.get('https://www.googleapis.com/books/v1/volumes?q=Hobbit')
 
+
 google = response.json()
+
+
+class QueryDetails(BaseModel):
+    q: str
+
+
 
 @app.get('/')
 def welcome():
@@ -67,8 +74,6 @@ def books(published_date: Optional[int] = None, sort: Optional[str] = None, auth
        return {'books': list(df['data'])}
 
     
-
-
 @app.get('/books/{book_id}')
 def books(book_id: str):
 
@@ -87,6 +92,12 @@ def books(book_id: str):
     return {'books' : result}
 
 
-@app.get("/items")
-def read_items(q: List[int] = Query(None)):
-    return {"q": q}
+@app.post("/db")
+def download_dataset(details : QueryDetails):
+    path_to_load = f'https://www.googleapis.com/books/v1/volumes?q={details.q}'
+
+    dataset = requests.get(path_to_load)
+
+    json_version = dataset.json()
+
+    return json_version
