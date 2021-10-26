@@ -1,1 +1,0 @@
-{"id":"79645185-ba20-455a-8980-72b7cc7dd629","space":12511,"runtime":"python3.9","name":"Books_project","path":"ahewcg","project":"a0vr5w7i","account":"144798365827","region":"eu-central-1","deps":["fastapi","uvicorn","pandas","numpy","requests"],"envs":null,"public":true,"log_level":"debug","cron":""}
