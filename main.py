@@ -1,22 +1,36 @@
 import requests
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Depends
 from pydantic import BaseModel
 import pandas as pd
 from typing import Optional, List
 import numpy as np
+from sqlalchemy.orm import Session
+from database_config import Base, SessionLocal
+from database_config import engine
+
+from database_config import Books_table
+
 
 
 app = FastAPI()
 
-response = requests.get('https://www.googleapis.com/books/v1/volumes?q=Hobbit')
 
+Base.metadata.create_all(engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+response = requests.get('https://www.googleapis.com/books/v1/volumes?q=Hobbit')
 
 google = response.json()
 
-
 class QueryDetails(BaseModel):
     q: str
-
 
 
 @app.get('/')
@@ -93,11 +107,34 @@ def books(book_id: str):
 
 
 @app.post("/db")
-def download_dataset(details : QueryDetails):
+def download_dataset(details : QueryDetails, db: Session = Depends(get_db)):
     path_to_load = f'https://www.googleapis.com/books/v1/volumes?q={details.q}'
 
     dataset = requests.get(path_to_load)
 
-    json_version = dataset.json()
+    all_books_json = dataset.json()['items']
 
-    return json_version
+
+    for book in all_books_json:
+        b_id = book.get('id')
+        b_link = book.get('selfLink')
+        b_title = book.get('volumeInfo').get('title')
+        b_publisheddate = book.get('volumeInfo').get('publishedDate')
+        b_language = book.get('volumeInfo').get('language')
+        b_maturity = book.get('volumeInfo').get('maturityRating')
+    
+        new_blog = Books_table(google_id = b_id, link = b_link, title = b_title, publishedDate = b_publisheddate, language = b_language, maturity = b_maturity)
+
+        db.add(new_blog)
+
+        db.commit()
+
+        db.refresh(new_blog)
+
+    return {'Upload successful'}
+
+
+@app.get('/get_all_data_from_db')
+def Get_Data_From_DB(db: Session = Depends(get_db)):
+    data = db.query(Books_table).all()
+    return data
